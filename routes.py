@@ -3,7 +3,7 @@
 import secrets
 from decimal import ROUND_HALF_UP, Decimal
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy.exc import IntegrityError
 
 from models import Order, OrderItem, Product, db
@@ -46,6 +46,12 @@ def _generate_order_number():
         if taken is None:
             return candidate
     return None
+
+
+@main.get("/")
+def index():
+    """Render the storefront."""
+    return render_template("parcial2.html")
 
 
 @main.get("/api/products")

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Lúmen - Librería &amp; Papelería Técnica{% endblock %}
+
+{% block body_attrs %}class="d-flex flex-column min-vh-100"{% endblock %}
+
+{% block content %}
+  <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top py-3">
+    <div class="container">
+      <a class="navbar-brand d-flex items-center gap-2 font-heading fw-bold" href="#">
+        <div class="navbar-brand-logo">
+          <i class="fa-solid fa-pen-ruler"></i>
+        </div>
+        <span class="fs-4 text-dark ms-2">LÚMEN <span class="fs-6 text-muted fw-normal">| Papelería Técnica</span></span>
+      </a>
+
+      <button class="btn btn-outline-dark d-lg-none relative" type="button" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+        <i class="fa-solid fa-cart-shopping"></i>
+        <span id="nav-cart-badge" class="badge bg-danger rounded-pill ms-1">0</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="container my-4">
+    <!-- Hero Banner -->
+    <div class="hero-banner p-4 p-md-5 mb-4">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <span class="badge bg-white text-primary mb-2 px-3 py-2 rounded-pill fw-semibold">Colección 2026</span>
+          <h1 class="display-5 font-heading fw-bold mb-3">Herramientas de Precisión para tus Ideas</h1>
+          <p class="lead mb-4 opacity-90">Explora nuestro catálogo de artículos de dibujo técnico, escritura de alta gama, cuadernos de diseño y organización.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="row g-3 mb-4 align-items-center bg-white p-3 rounded-4 shadow-sm border">
+      <div class="col-md-7 col-lg-8">
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0 rounded-start-3 text-muted">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </span>
+          <input type="text" id="search-input" class="form-control bg-light border-start-0 rounded-end-3 py-2" placeholder="Buscar por título o descripción (ej. Rotulador, Cuaderno, Escuadra)...">
+        </div>
+      </div>
+      <div class="col-md-5 col-lg-4">
+        <select id="category-filter" class="form-select bg-light py-2 rounded-3">
+          <option value="all">Todas las Categorías</option>
+        </select>
+      </div>
+      <div class="col-12 col-md-4 col-lg-3">
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0 text-muted">$</span>
+          <input type="number" id="price-min" class="form-control bg-light border-start-0 py-2" placeholder="Min" min="0" style="width:60px;">
+          <span class="input-group-text text-muted">-</span>
+          <input type="number" id="price-max" class="form-control bg-light border-end-0 rounded-end-3 py-2" placeholder="Max" min="0" style="width:60px;">
+        </div>
+      </div>
+    </div>
+
+    <div id="products-grid" class="row g-4">
+      <!-- Dynamic JS Content Cards -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="no-products" class="text-center py-5 d-none">
+      <i class="fa-solid fa-folder-open text-muted display-1 mb-3"></i>
+      <h4 class="fw-bold text-secondary">No se encontraron artículos</h4>
+      <p class="text-muted">Prueba cambiando las palabras clave de búsqueda o el filtro de categoría.</p>
+    </div>
+  </div>
+
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
+    <div class="offcanvas-header border-bottom bg-light">
+      <h5 class="offcanvas-title font-heading fw-bold text-dark" id="cartOffcanvasLabel">
+        <i class="fa-solid fa-bag-shopping text-primary me-2"></i>Carrito de Compras
+      </h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <div class="offcanvas-body d-flex flex-column">
+      <!-- Cart List Items -->
+      <div id="cart-items-container" class="flex-grow-1 overflow-y-auto pe-1">
+        <!-- Dynamic JS Cart Row -->
+      </div>
+
+      <!-- Cart Totals & Actions -->
+      <div class="border-top pt-3 mt-3 bg-white">
+        <div class="d-flex justify-content-between text-muted mb-1">
+          <span>Subtotal</span>
+          <span id="cart-subtotal" class="fw-bold">$0.00</span>
+        </div>
+        <div class="d-flex justify-content-between text-muted mb-2">
+          <span>IVA (21%)</span>
+          <span id="cart-tax" class="fw-bold">$0.00</span>
+        </div>
+        <div class="d-flex justify-content-between text-dark fs-5 fw-bold mb-3">
+          <span>Total</span>
+          <span id="cart-total" class="text-primary">$0.00</span>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-4">
+            <button onclick="clearCart()" class="btn btn-outline-danger w-100 py-2 rounded-3" title="Vaciar Carrito">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <div class="col-8">
+            <button onclick="checkout()" class="btn btn-success w-100 py-2 rounded-3 fw-bold">
+              Finalizar Compra
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Cart Toggle Button -->
+  <button class="btn-floating-cart d-none d-lg-flex" data-bs-toggle="offcanvas" data-bs-target="#cartOffcanvas">
+    <i class="fa-solid fa-cart-shopping"></i>
+    <span id="floating-cart-badge" class="cart-badge-count">0</span>
+  </button>
+
+  <div class="modal fade" id="checkoutModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 rounded-4 shadow-lg">
+        <div class="modal-body text-center p-5">
+          <div class="mb-3">
+            <i id="checkout-modal-icon" class="fa-solid fa-circle-check text-success display-1"></i>
+          </div>
+          <h3 id="checkout-modal-title" class="font-heading fw-bold mb-2">¡Gracias por tu Compra!</h3>
+          <p id="checkout-modal-message" class="text-muted mb-4">Hemos registrado tu pedido correctamente. Recibirás el comprobante con los detalles del envío en tu correo electrónico.</p>
+          <div class="p-3 bg-light rounded-3 mb-4 border">
+            <small class="text-muted d-block">Número de Pedido</small>
+            <span id="order-id" class="fw-bold text-dark font-monospace">#LUM-94820</span>
+          </div>
+
+          <!-- Pending order summary, visible only in the confirm state -->
+          <div id="checkout-summary" class="text-start mb-4 d-none"></div>
+
+          <div class="d-grid gap-2">
+            <button type="button" id="checkout-primary-button" class="btn btn-success w-100 py-2 rounded-3 fw-bold" onclick="handleCheckoutPrimaryAction()">
+              <i id="checkout-primary-icon" class="fa-solid fa-check me-2"></i><span id="checkout-primary-label">Finalizar Compra</span>
+            </button>
+            <button type="button" id="checkout-cancel-button" class="btn btn-outline-secondary w-100 py-2 rounded-3 fw-bold" onclick="cancelPurchase()" data-bs-dismiss="modal">
+              <i class="fa-solid fa-arrow-rotate-left me-2"></i>Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-white border-top mt-auto py-4">
+    <div class="container text-center text-muted fs-7">
+      <p class="mb-0">© 2026 Lúmen Librería &amp; Papelería Técnica. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+{% endblock %}
