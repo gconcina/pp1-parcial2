@@ -66,9 +66,16 @@ css/tpn3.css        (eliminado)
 
 ## Delivery strategy
 
-`single-pr` (local, sin remoto configurado). El repositorio no tiene commits previos ni remote, y la
-conversión es una aplicación monolítica cohesionada: partirla en slices encadenados no aporta foco de
-review. Push/PR quedan como decisiones del usuario.
+`single-branch` — el trabajo se developing y se entrega **directamente sobre `main`**, con commits
+por work unit. El repositorio es público y no usa pull requests: el remoto es
+`https://github.com/gconcina/pp1-parcial2.git` y `main` es la rama por defecto.
+
+Decisión del usuario (2026-10-22): descartar el flujo de rama feature + PR y trabajar sobre `main`.
+Los commits por work unit se conservan igual, así que el historial sigue siendo revisable commit a
+commit; lo que cambia es que no hay una etapa de revisión previa al merge.
+
+El remoto sí estaba configurado al momento de subir; la entrega local de esta feature se сдела
+primero sobre `feature/flask-parcial2` y se fast-forwardeó a `main` al publicar.
 
 Forecast de líneas authored: ~1150 (movimiento mecánico de HTML/CSS + backend, JS, tests y docs).
 Presupuesto por work unit: se mantém la heurística de ~400 líneas por task como guía de planificación
@@ -159,15 +166,18 @@ Presupuesto por work unit: se mantém la heurística de ~400 líneas por task co
 
 ## Commits
 
+Todos sobre `main` (fast-forward desde `feature/flask-parcial2`, que se eliminó al decidir trabajar
+directo sobre la rama principal).
+
 | Commit | Work unit |
 |--------|-----------|
 | `3423f53` | `feat(api)`: factory de Flask, modelos SQLAlchemy, seed y API JSON |
 | `d018400` | `feat(storefront)`: templates Jinja + cliente JS; se elimina la página estática `tpn3.html` |
 | `742ee16` | `test(api)`: suite de 24 tests sobre la API |
-| (este) | `docs`: README y documento de feature |
+| `3dbe761` | `docs`: README y documento de feature |
+| `425cc02` | `chore`: se ignora el cache generado del skill-registry |
 
 ## Next step
 
-Entrega. Push y apertura de pull request quedan como decisiones del usuario bajo la política
-ordinaria del repositorio. RDD está `off` (decidido globalmente), por lo que no hay revisión nativa
-pendiente.
+Publicado en `https://github.com/gconcina/pp1-parcial2` (rama `main`, repo público). El flujo de
+trabajo es commit directo sobre `main`.
