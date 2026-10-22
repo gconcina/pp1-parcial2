@@ -1,60 +1,61 @@
-# Lúmen — Flask store with a SQLite catalog
+# Lúmen — Tienda Flask con catálogo en SQLite
 
-A single-page catalog store for a technical stationery shop, rebuilt from a static HTML file into a
-Flask application. The catalog, the stock and the orders now live in a SQLite database, the browser
-talks to a JSON API, and the storefront is a Jinja template with a vanilla-JS client.
+Tienda de papelería técnica en una sola página, reconstruida a partir de un archivo HTML estático
+en una aplicación Flask. El catálogo, el stock y los pedidos residen ahora en una base de datos
+SQLite, el navegador se comunica con una API JSON y la interfaz es una plantilla Jinja con un
+cliente en JavaScript puro.
 
-## Quick path
+## Inicio rápido
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-flask --app app init-db     # create instance/parcial2.db
-flask --app app seed        # load the 8-product catalog
+flask --app app init-db     # crea instance/parcial2.db
+flask --app app seed        # carga el catálogo de 8 productos
 flask --app app run         # http://127.0.0.1:5000
 ```
 
-Run the tests with `python -m pytest -q` (24 tests, no server required).
+Las pruebas se ejecutan con `python -m pytest -q` (24 tests, sin necesidad de levantar el servidor).
 
-## Details
+## Detalles
 
-| Topic | Decision |
-|-------|----------|
-| Stack | Flask 3.1 + Flask-SQLAlchemy 3.1 + SQLite. No build step, no bundler, no npm. |
-| Data | `instance/parcial2.db`, created by `flask init-db`. Delete it to start from scratch. |
-| Catalog | Seeded by `flask seed` from `seed.py`; the command is idempotent. |
-| Filtering | Server-side. The client sends `q`, `category`, `min_price`, `max_price` to `/api/products`. |
-| Stock | Authoritative on the server. The cart lives in the browser (`localStorage["parcial2_cart"]`). |
-| Checkout | `POST /api/checkout` validates stock, creates the order and deducts the stock in one transaction. |
-| Money | `Numeric(10,2)` in the database, JSON numbers in the API, IVA fixed at 21%. |
-| Order numbers | `LUM-` + 5 digits, unique per order. |
+| Tema | Decisión |
+|------|----------|
+| Stack | Flask 3.1 + Flask-SQLAlchemy 3.1 + SQLite. Sin build step, sin bundler, sin npm. |
+| Datos | `instance/parcial2.db`, creado con `flask init-db`. Se elimina para empezar de cero. |
+| Catálogo | Cargado con `flask seed` desde `seed.py`; el comando es idempotente. |
+| Filtrado | En el servidor. El cliente envía `q`, `category`, `min_price`, `max_price` a `/api/products`. |
+| Stock | Con autoridad en el servidor. El carrito vive en el navegador (`localStorage["parcial2_cart"]`). |
+| Checkout | `POST /api/checkout` valida el stock, crea el pedido y descuenta las unidades en una transacción. |
+| Dinero | `Numeric(10,2)` en la base de datos, números JSON en la API, IVA fijo del 21%. |
+| Números de pedido | `LUM-` + 5 dígitos, únicos por pedido. |
 
-## Project structure
+## Estructura del proyecto
 
 ```
-app.py                    application factory, config, CLI commands
-models.py                 SQLAlchemy models: Product, Order, OrderItem
-routes.py                 storefront page + JSON API blueprint
-seed.py                   the original 8-product catalog
-templates/base.html       page skeleton shared by the storefront
-templates/parcial2.html   the storefront markup
-static/css/parcial2.css   stylesheet (moved unchanged from the static page)
-static/js/parcial2.js     catalog, filters, cart and checkout client
-tests/test_api.py         API test suite
-odd/tasks/                the feature document for this conversion
+app.py                    factory de la aplicación, configuración y comandos CLI
+models.py                 modelos SQLAlchemy: Product, Order, OrderItem
+routes.py                 página del storefront + blueprint de la API JSON
+seed.py                   el catálogo original de 8 productos
+templates/base.html       esqueleto de página compartido por el storefront
+templates/parcial2.html   markup del storefront
+static/css/parcial2.css   hoja de estilos (movida sin cambios desde la página estática)
+static/js/parcial2.js     cliente de catálogo, filtros, carrito y checkout
+tests/test_api.py         suite de tests de la API
+odd/tasks/                documento de feature de esta conversión
 ```
 
 ## API
 
-| Method | Route | Purpose |
-|--------|-------|---------|
-| `GET` | `/` | The storefront page. |
-| `GET` | `/api/products` | Catalog, optionally filtered by `q`, `category`, `min_price`, `max_price`. |
-| `GET` | `/api/categories` | Distinct categories as `{value, label}` pairs. |
-| `POST` | `/api/checkout` | Creates an order from `{"items": [{"product_id": 1, "quantity": 2}]}`. |
-| `GET` | `/api/orders/<order_number>` | A single order, including `created_at`. |
+| Método | Ruta | Propósito |
+|--------|------|-----------|
+| `GET` | `/` | La página del storefront. |
+| `GET` | `/api/products` | Catálogo, opcionalmente filtrado por `q`, `category`, `min_price`, `max_price`. |
+| `GET` | `/api/categories` | Categorías distintas como pares `{value, label}`. |
+| `POST` | `/api/checkout` | Crea un pedido a partir de `{"items": [{"product_id": 1, "quantity": 2}]}`. |
+| `GET` | `/api/orders/<order_number>` | Un pedido puntual, incluido `created_at`. |
 
 ```bash
 curl "http://127.0.0.1:5000/api/products?category=arte&max_price=40"
@@ -63,32 +64,5 @@ curl -X POST http://127.0.0.1:5000/api/checkout \
   -d '{"items":[{"product_id":1,"quantity":2}]}'
 ```
 
-Status codes: `201` order created, `409` not enough stock (no order, no stock deducted), `400`
-malformed payload, `404` unknown order.
-
-## Checklist
-
-- [ ] `flask --app app init-db && flask --app app seed` prints the seeded catalog.
-- [ ] `http://127.0.0.1:5000/` renders the store with the 8 original products.
-- [ ] Search, category and price filters narrow the grid.
-- [ ] Adding to the cart updates the totals, the IVA and the badge counters.
-- [ ] "Finalizar Compra" creates the order and shows the real order number.
-- [ ] `python -m pytest -q` passes 24 tests.
-
-## What changed from the static page
-
-- The product list, the filters and the stock moved to the server; the client only renders what the API returns.
-- The `tpn3_stock` localStorage hack is gone — stock is a database column now.
-- The checkout modal has a confirm state: the order is created when the user confirms, and "Cancelar"
-  closes the modal without creating anything.
-- The product cards are built with `textContent` instead of string interpolation into `innerHTML`.
-- The `refreshAll()` filter-reset bug of the original page is not reproduced: the active filter survives
-  a cart change.
-
-## Next step
-
-Push the branch and open a pull request when you want the review trail:
-
-```bash
-git push -u origin feature/flask-parcial2
-```
+Códigos de estado: `201` pedido creado, `409` sin stock suficiente (no se crea el pedido ni se
+descuenta stock), `400` payload mal formado, `404` pedido inexistente.
