@@ -3,3 +3,6 @@ instance/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Generated cache from the gentle-ai skill-registry refresh
+.atl/.skill-registry.cache.json
