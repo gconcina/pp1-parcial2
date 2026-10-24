@@ -868,10 +868,15 @@
    */
   function setupVoiceSearch() {
     var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition || !dom.voiceSearchBtn) {
-      if (dom.voiceSearchBtn) {
-        dom.voiceSearchBtn.classList.add('d-none');
-      }
+    if (!dom.voiceSearchBtn) {
+      return;
+    }
+    if (!SpeechRecognition) {
+      // Keep the button visible so the user gets feedback instead of a
+      // silently hidden control; explain on click.
+      dom.voiceSearchBtn.addEventListener('click', function () {
+        alert('Tu navegador no soporta reconocimiento de voz. Probá con Chrome, Edge o Vivaldi actualizado.');
+      });
       return;
     }
 
