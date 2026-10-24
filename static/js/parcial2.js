@@ -862,6 +862,92 @@
   }
 
   /**
+   * Wire the microphone button to the Web Speech API so the user can search
+   * by voice. Gracefully degrades: the button is hidden when the browser
+   * does not support speech recognition.
+   */
+  function setupVoiceSearch() {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition || !dom.voiceSearchBtn) {
+      if (dom.voiceSearchBtn) {
+        dom.voiceSearchBtn.classList.add('d-none');
+      }
+      return;
+    }
+
+    var recognition = new SpeechRecognition();
+    recognition.lang = 'es-AR';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.continuous = false;
+
+    var listening = false;
+
+    function setListening(state) {
+      listening = state;
+      var icon = dom.voiceSearchBtn.querySelector('i');
+      if (state) {
+        dom.voiceSearchBtn.classList.remove('btn-light');
+        dom.voiceSearchBtn.classList.add('btn-danger');
+        if (icon) {
+          icon.className = 'fa-solid fa-microphone-lines';
+        }
+        dom.searchInput.placeholder = 'Escuchando... hablá ahora';
+      } else {
+        dom.voiceSearchBtn.classList.remove('btn-danger');
+        dom.voiceSearchBtn.classList.add('btn-light');
+        if (icon) {
+          icon.className = 'fa-solid fa-microphone';
+        }
+        dom.searchInput.placeholder = 'Buscar por título o descripción (ej. Rotulador, Cuaderno, Escuadra)...';
+      }
+    }
+
+    recognition.onresult = function (event) {
+      var transcript = '';
+      for (var i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      transcript = transcript.trim();
+      if (transcript) {
+        dom.searchInput.value = transcript;
+        // Reuse the existing debounced filter path.
+        dom.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    };
+
+    recognition.onerror = function (event) {
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        alert('No se pudo acceder al micrófono. Revisá los permisos del navegador.');
+      } else if (event.error === 'no-speech') {
+        // Silent: the user simply did not speak.
+      } else if (event.error !== 'aborted') {
+        alert('Error de reconocimiento de voz: ' + event.error);
+      }
+      setListening(false);
+    };
+
+    recognition.onend = function () {
+      setListening(false);
+    };
+
+    dom.voiceSearchBtn.addEventListener('click', function () {
+      if (listening) {
+        try { recognition.stop(); } catch (e) { /* ignore */ }
+        setListening(false);
+        return;
+      }
+      try {
+        recognition.start();
+        setListening(true);
+      } catch (e) {
+        // Recognition may already be running; ignore.
+        setListening(false);
+      }
+    });
+  }
+
+  /**
    * Cache the DOM references used across the application.
    */
   function cacheDom() {
@@ -874,6 +960,7 @@
     dom.navBadge = byId('nav-cart-badge');
     dom.floatingBadge = byId('floating-cart-badge');
     dom.searchInput = byId('search-input');
+    dom.voiceSearchBtn = byId('voice-search-btn');
     dom.categoryFilter = byId('category-filter');
     dom.priceMin = byId('price-min');
     dom.priceMax = byId('price-max');
@@ -896,6 +983,7 @@
     cacheDom();
     loadCart();
     bindEvents();
+    setupVoiceSearch();
     updateCartUI();
     loadCategories();
     loadCatalog();
