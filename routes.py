@@ -3,6 +3,8 @@
 import secrets
 from decimal import ROUND_HALF_UP, Decimal
 
+import re
+
 from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy.exc import IntegrityError
 
@@ -230,3 +232,161 @@ def get_order(order_number):
         return jsonify({"error": "Order not found"}), 404
 
     return jsonify(order.to_dict(include_created_at=True)), 200
+
+
+def _find_product(text):
+    """Find the product best matching the given free-text message.
+
+    Tries, in order: an exact title substring, then a significant word
+    from the title, then a significant word from the description.
+    """
+    products = db.session.scalars(db.select(Product)).all()
+    low = text.lower()
+    for product in products:
+        if product.title.lower() in low:
+            return product
+    for product in products:
+        for word in product.title.lower().split():
+            if len(word) >= 4 and word in low:
+                return product
+    for product in products:
+        for word in product.description.lower().split():
+            if len(word) >= 5 and word in low:
+                return product
+    return None
+
+
+def _match_any(text, keywords):
+    """Return True if any keyword appears in text as a whole word/phrase.
+
+    Uses word boundaries so short keywords such as "hi" or "hay" do not
+    match inside unrelated words (e.g. "mochila" contains "hi").
+    """
+    for keyword in keywords:
+        if re.search(r"\b" + re.escape(keyword) + r"\b", text):
+            return True
+    return False
+
+
+@main.post("/api/chat")
+def chat():
+    """Rule-based assistant for the Lúmen storefront.
+
+    Works entirely on the server (no external service), so it keeps
+    working on localhost without internet access.
+    """
+    payload = request.get_json(silent=True) or {}
+    message = str(payload.get("message", "")).strip()
+    if not message:
+        return jsonify({
+            "reply": "Escribí algo y te ayudo.",
+            "suggestions": ["Ver catálogo", "Buscar un artículo", "Ayuda"],
+        }), 200
+
+    low = message.lower()
+
+    greeting_keywords = ("hola", "buenos", "buenas", "hey", "hi", "qué tal", "que tal")
+    if any(re.search(r"\b" + re.escape(word) + r"\b", low) for word in greeting_keywords):
+        return jsonify({
+            "reply": "¡Hola! Soy el asistente de Lúmen. Puedo ayudarte a buscar productos, consultar stock y precios, y guiarte en tu compra. ¿En qué te ayudo?",
+            "suggestions": ["Ver catálogo", "Buscar un artículo", "Consultar stock"],
+        }), 200
+
+    if _match_any(low, ("ayuda", "qué podés", "que podes", "opciones", "qué hacés", "que haces", "qué sabés", "que sabes")):
+        return jsonify({
+            "reply": "Puedo ayudarte con:\n• Buscar productos por nombre\n• Consultar stock y precios\n• Listar categorías\n• Guiarte en el checkout\n\nProbá escribir \"busco cuaderno\" o \"precio de la mochila\".",
+            "suggestions": ["Ver catálogo", "Buscar un artículo", "Consultar stock"],
+        }), 200
+
+    if _match_any(low, ("quién sos", "quien sos", "qué sos", "que sos", "tu nombre", "quién eres")):
+        return jsonify({
+            "reply": "Soy el asistente virtual de Lúmen, la librería y papelería técnica. Estoy acá para ayudarte a encontrar lo que necesitás.",
+            "suggestions": ["Ver catálogo", "Buscar un artículo"],
+        }), 200
+
+    if _match_any(low, ("categoría", "categoria", "categorías", "categorias", "qué venden", "que venden", "qué tienen", "que tienen", "secciones")):
+        categories = db.session.execute(
+            db.select(Product.category, Product.category_label).distinct()
+        ).all()
+        lines = [f"• {label}" for _, label in categories]
+        return jsonify({
+            "reply": "Tenemos estas categorías:\n" + "\n".join(lines) + "\n\n¿Querés ver productos de alguna?",
+            "suggestions": [label for _, label in categories],
+        }), 200
+
+    if _match_any(low, ("catálogo", "catalogo", "productos", "listar", "mostrar todo", "ver todo", "qué hay", "que hay")):
+        products = db.session.scalars(db.select(Product).order_by(Product.id)).all()
+        lines = [f"• {product.title} — ${float(product.price):.2f} ({product.stock} en stock)" for product in products]
+        return jsonify({
+            "reply": "Nuestro catálogo:\n" + "\n".join(lines),
+            "suggestions": ["Buscar un artículo", "Consultar stock"],
+        }), 200
+
+    if _match_any(low, ("stock", "disponibilidad", "disponible", "hay stock", "quedan", "agotado")):
+        product = _find_product(low)
+        if product is not None:
+            if product.stock > 0:
+                reply = f"\"{product.title}\" tiene {product.stock} unidades disponibles."
+            else:
+                reply = f"\"{product.title}\" está agotado por el momento."
+            return jsonify({"reply": reply, "suggestions": ["Ver precio", "Buscar otro"]}), 200
+        products = db.session.scalars(db.select(Product).order_by(Product.id)).all()
+        lines = [f"• {product.title}: {product.stock} en stock" for product in products]
+        return jsonify({
+            "reply": "Stock actual:\n" + "\n".join(lines),
+            "suggestions": ["Buscar un artículo"],
+        }), 200
+
+    if _match_any(low, ("precio", "cuánto", "cuanto", "cuesta", "vale", "costo", "cuánto sale")):
+        product = _find_product(low)
+        if product is not None:
+            return jsonify({
+                "reply": f"\"{product.title}\" cuesta ${float(product.price):.2f}.",
+                "suggestions": ["Consultar stock", "Agregar al carrito"],
+            }), 200
+        products = db.session.scalars(db.select(Product).order_by(Product.id)).all()
+        lines = [f"• {product.title}: ${float(product.price):.2f}" for product in products]
+        return jsonify({
+            "reply": "Precios:\n" + "\n".join(lines),
+            "suggestions": ["Buscar un artículo"],
+        }), 200
+
+    if _match_any(low, ("busco", "buscar", "tienen", "hay", "necesito", "quiero", "dame")):
+        product = _find_product(low)
+        if product is not None:
+            return jsonify({
+                "reply": f"Encontré: \"{product.title}\" — ${float(product.price):.2f}, {product.stock} en stock.\n{product.description}",
+                "suggestions": ["Consultar stock", "Ver precio"],
+            }), 200
+        results = db.session.scalars(
+            db.select(Product).where(
+                Product.title.ilike(f"%{message}%") | Product.description.ilike(f"%{message}%")
+            )
+        ).all()
+        if results:
+            lines = [f"• {product.title} — ${float(product.price):.2f}" for product in results]
+            return jsonify({
+                "reply": "Encontré estos artículos:\n" + "\n".join(lines),
+                "suggestions": ["Ver detalles"],
+            }), 200
+        return jsonify({
+            "reply": f"No encontré artículos relacionados con \"{message}\". Probá con otra palabra o mirá el catálogo completo.",
+            "suggestions": ["Ver catálogo", "Ayuda"],
+        }), 200
+
+    if _match_any(low, ("comprar", "checkout", "finalizar", "pagar", "compra", "pedido")):
+        return jsonify({
+            "reply": "Para finalizar tu compra, agregá los productos al carrito con \"Agregar\" y hacé clic en \"Finalizar Compra\" en el carrito lateral. Se genera un número de pedido y se descuenta el stock automáticamente.",
+            "suggestions": ["Ver catálogo", "Buscar un artículo"],
+        }), 200
+
+    if _match_any(low, ("carrito", "mi carrito", "total")):
+        return jsonify({
+            "reply": "Tu carrito está en el panel lateral (ícono del carrito, arriba a la derecha). Ahí podés ver los productos, ajustar cantidades y finalizar la compra. El subtotal incluye IVA del 21%.",
+            "suggestions": ["Ver catálogo", "Finalizar compra"],
+        }), 200
+
+    return jsonify({
+        "reply": "No entendí bien. Podés preguntarme por productos, stock, precios o categorías. Escribí \"ayuda\" para ver las opciones.",
+        "suggestions": ["Ver catálogo", "Ayuda", "Buscar un artículo"],
+    }), 200
