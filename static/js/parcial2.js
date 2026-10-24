@@ -926,6 +926,8 @@
         alert('No se pudo acceder al micrófono. Revisá los permisos del navegador.');
       } else if (event.error === 'no-speech') {
         // Silent: the user simply did not speak.
+      } else if (event.error === 'network') {
+        alert('Error de red: el reconocimiento de voz necesita conexión a internet (usa el servicio de Google). Verificá tu conexión y volvé a intentar.');
       } else if (event.error !== 'aborted') {
         alert('Error de reconocimiento de voz: ' + event.error);
       }
@@ -936,6 +938,7 @@
       setListening(false);
     };
 
+    var retryCount = 0;
     dom.voiceSearchBtn.addEventListener('click', function () {
       if (listening) {
         try { recognition.stop(); } catch (e) { /* ignore */ }
@@ -945,11 +948,31 @@
       try {
         recognition.start();
         setListening(true);
+        retryCount = 0;
       } catch (e) {
         // Recognition may already be running; ignore.
         setListening(false);
       }
     });
+
+    // Retry once on a transient network error.
+    var originalOnError = recognition.onerror;
+    recognition.onerror = function (event) {
+      if (event.error === 'network' && retryCount === 0) {
+        retryCount = 1;
+        setListening(false);
+        window.setTimeout(function () {
+          try {
+            recognition.start();
+            setListening(true);
+          } catch (e) {
+            setListening(false);
+          }
+        }, 800);
+        return;
+      }
+      originalOnError(event);
+    };
   }
 
   /**
