@@ -46,10 +46,17 @@ def init_security(app):
 
     # Sesiones de usuario seguras.
     app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
-    app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
+    # setdefault no alcanza: Flask trae SESSION_COOKIE_SAMESITE=None por defecto,
+    # y setdefault no sobreescribe un valor existente (aunque sea None).
+    if app.config.get("SESSION_COOKIE_SAMESITE") is None:
+        app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     # En producción (con HTTPS) hay que poner SESSION_COOKIE_SECURE=True.
     # En localhost se usa http, así que lo dejamos en False.
     app.config.setdefault("SESSION_COOKIE_SECURE", False)
+
+    # Default to enabled: the ``app`` test fixture turns it off explicitly,
+    # but other fixtures (e.g. ``secure_client``) rely on the default.
+    app.config.setdefault("RATELIMIT_ENABLED", True)
 
     csrf.init_app(app)
     limiter.init_app(app)
