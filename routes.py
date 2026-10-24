@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy.exc import IntegrityError
 
 from models import Order, OrderItem, Product, db
+from security import limiter
 
 #: Fixed IVA rate applied to the order subtotal.
 TAX_RATE = Decimal("0.21")
@@ -106,6 +107,7 @@ def list_categories():
 
 
 @main.post("/api/checkout")
+@limiter.limit("5 per minute")
 def checkout():
     """Validate a cart, deduct stock and persist the order."""
     payload = request.get_json(silent=True)
@@ -269,6 +271,7 @@ def _match_any(text, keywords):
 
 
 @main.post("/api/chat")
+@limiter.limit("20 per minute")
 def chat():
     """Rule-based assistant for the Lúmen storefront.
 

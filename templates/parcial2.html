@@ -104,12 +104,12 @@
 
         <div class="row g-2">
           <div class="col-4">
-            <button onclick="clearCart()" class="btn btn-outline-danger w-100 py-2 rounded-3" title="Vaciar Carrito">
+            <button type="button" id="clear-cart-button" class="btn btn-outline-danger w-100 py-2 rounded-3" title="Vaciar Carrito">
               <i class="fa-solid fa-trash-can"></i>
             </button>
           </div>
           <div class="col-8">
-            <button onclick="checkout()" class="btn btn-success w-100 py-2 rounded-3 fw-bold">
+            <button type="button" id="checkout-button" class="btn btn-success w-100 py-2 rounded-3 fw-bold">
               Finalizar Compra
             </button>
           </div>
@@ -142,10 +142,10 @@
           <div id="checkout-summary" class="text-start mb-4 d-none"></div>
 
           <div class="d-grid gap-2">
-            <button type="button" id="checkout-primary-button" class="btn btn-success w-100 py-2 rounded-3 fw-bold" onclick="handleCheckoutPrimaryAction()">
+            <button type="button" id="checkout-primary-button" class="btn btn-success w-100 py-2 rounded-3 fw-bold">
               <i id="checkout-primary-icon" class="fa-solid fa-check me-2"></i><span id="checkout-primary-label">Finalizar Compra</span>
             </button>
-            <button type="button" id="checkout-cancel-button" class="btn btn-outline-secondary w-100 py-2 rounded-3 fw-bold" onclick="cancelPurchase()" data-bs-dismiss="modal">
+            <button type="button" id="checkout-cancel-button" class="btn btn-outline-secondary w-100 py-2 rounded-3 fw-bold" data-bs-dismiss="modal">
               <i class="fa-solid fa-arrow-rotate-left me-2"></i>Cancelar
             </button>
           </div>

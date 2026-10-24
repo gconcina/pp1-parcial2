@@ -30,6 +30,9 @@ def app():
             "TESTING": True,
             "SQLALCHEMY_DATABASE_URI": "sqlite://",
             "SQLALCHEMY_ENGINE_OPTIONS": {"poolclass": StaticPool},
+            # The API tests post JSON without a token and many times in a row.
+            "WTF_CSRF_ENABLED": False,
+            "RATELIMIT_ENABLED": False,
         }
     )
 
@@ -37,6 +40,31 @@ def app():
         db.create_all()
         seed_database()
         yield application
+        db.session.remove()
+        db.drop_all()
+
+
+@pytest.fixture()
+def secure_client():
+    """Test client with CSRF protection and rate limiting turned on."""
+    from app import create_app
+    from models import db
+    from security import limiter
+    from seed import seed_database
+
+    application = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite://",
+            "SQLALCHEMY_ENGINE_OPTIONS": {"poolclass": StaticPool},
+        }
+    )
+
+    with application.app_context():
+        db.create_all()
+        seed_database()
+        limiter.reset()
+        yield application.test_client()
         db.session.remove()
         db.drop_all()
 
@@ -295,3 +323,51 @@ def test_index_renders_the_storefront(client):
     response = client.get("/")
 
     assert response.status_code == 200
+
+
+# --------------------------------------------------------------------------
+# Security
+# --------------------------------------------------------------------------
+
+def test_security_headers_are_sent(client):
+    response = client.get("/")
+
+    assert response.headers["X-Frame-Options"] == "DENY"
+    assert "default-src 'self'" in response.headers["Content-Security-Policy"]
+    assert "frame-ancestors 'none'" in response.headers["Content-Security-Policy"]
+
+
+def test_index_includes_csrf_token(client):
+    response = client.get("/")
+
+    assert b'name="csrf-token"' in response.data
+
+
+def test_post_without_csrf_token_is_rejected(secure_client):
+    response = secure_client.post("/api/chat", json={"message": "hola"})
+
+    assert response.status_code == 400
+    assert "CSRF" in response.get_json()["error"]
+
+
+def test_post_with_csrf_token_is_accepted(secure_client):
+    page = secure_client.get("/").get_data(as_text=True)
+    token = re.search(r'name="csrf-token" content="([^"]+)"', page).group(1)
+
+    response = secure_client.post(
+        "/api/chat", json={"message": "hola"}, headers={"X-CSRFToken": token}
+    )
+
+    assert response.status_code == 200
+
+
+def test_checkout_is_rate_limited(secure_client):
+    page = secure_client.get("/").get_data(as_text=True)
+    token = re.search(r'name="csrf-token" content="([^"]+)"', page).group(1)
+    headers = {"X-CSRFToken": token}
+
+    for _ in range(5):
+        secure_client.post("/api/checkout", json={"items": []}, headers=headers)
+    response = secure_client.post("/api/checkout", json={"items": []}, headers=headers)
+
+    assert response.status_code == 429

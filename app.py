@@ -17,6 +17,7 @@ from sqlalchemy.engine import Engine
 
 from models import db
 from routes import main
+from security import init_security
 from seed import seed_database
 
 DATABASE_FILENAME = "parcial2.db"
@@ -56,6 +57,7 @@ def create_app(test_config=None):
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
+    init_security(app)
     app.register_blueprint(main)
 
     with app.app_context():

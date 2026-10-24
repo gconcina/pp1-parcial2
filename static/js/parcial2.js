@@ -58,6 +58,20 @@
   }
 
   /**
+   * Build the headers for a JSON POST, including the CSRF token that
+   * Flask-WTF puts in the <meta name="csrf-token"> tag.
+   *
+   * @returns {object}
+   */
+  function postHeaders() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': meta ? meta.getAttribute('content') : ''
+    };
+  }
+
+  /**
    * Create an element, optionally with a class name and a text node.
    *
    * @param {string} tag
@@ -784,7 +798,7 @@
 
     return requestJson(API_CHECKOUT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: postHeaders(),
       body: JSON.stringify(payload)
     })
       .catch(function () {
@@ -859,6 +873,13 @@
       state.filters.maxPrice = dom.priceMax.value;
       loadCatalog();
     });
+
+    // Buttons wired here instead of inline `onclick`, which the
+    // Content-Security-Policy blocks.
+    byId('clear-cart-button').addEventListener('click', clearCart);
+    byId('checkout-button').addEventListener('click', checkout);
+    dom.primaryButton.addEventListener('click', handleCheckoutPrimaryAction);
+    dom.cancelButton.addEventListener('click', cancelPurchase);
   }
 
   /**
@@ -1042,7 +1063,7 @@
 
       requestJson('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: postHeaders(),
         body: JSON.stringify({ message: text }),
       }).then(function (result) {
         removeTyping();
@@ -1135,7 +1156,7 @@
     loadCatalog();
   }
 
-  // Expose the handlers used by the inline `onclick` attributes.
+  // Expose the handlers globally (handy for debugging from the console).
   window.addToCart = addToCart;
   window.changeQty = changeQty;
   window.removeFromCart = removeFromCart;
