@@ -976,6 +976,116 @@
   }
 
   /**
+   * Wire the floating chatbot widget to /api/chat.
+   */
+  function setupChat() {
+    if (!dom.chatToggle || !dom.chatPanel) {
+      return;
+    }
+
+    function scrollToBottom() {
+      if (dom.chatMessages) {
+        dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
+      }
+    }
+
+    function addMessage(text, role) {
+      var row = el('div', 'chat-msg ' + (role === 'user' ? 'user' : 'bot'));
+      var bubble = el('div', 'chat-bubble', text);
+      row.appendChild(bubble);
+      dom.chatMessages.appendChild(row);
+      scrollToBottom();
+    }
+
+    function renderSuggestions(list) {
+      dom.chatSuggestions.innerHTML = '';
+      if (!list || !list.length) {
+        return;
+      }
+      list.forEach(function (suggestion) {
+        var btn = el('button', 'btn btn-outline-primary chat-suggestion', suggestion);
+        btn.type = 'button';
+        btn.addEventListener('click', function () {
+          dom.chatInput.value = suggestion;
+          sendMessage();
+        });
+        dom.chatSuggestions.appendChild(btn);
+      });
+    }
+
+    function showTyping() {
+      var row = el('div', 'chat-msg bot');
+      row.setAttribute('data-typing', 'true');
+      var bubble = el('div', 'chat-bubble chat-typing', 'Escribiendo...');
+      row.appendChild(bubble);
+      dom.chatMessages.appendChild(row);
+      scrollToBottom();
+      return row;
+    }
+
+    function removeTyping() {
+      var typing = dom.chatMessages.querySelector('[data-typing="true"]');
+      if (typing) {
+        typing.remove();
+      }
+    }
+
+    function sendMessage() {
+      var text = (dom.chatInput.value || '').trim();
+      if (!text) {
+        return;
+      }
+      addMessage(text, 'user');
+      dom.chatInput.value = '';
+      renderSuggestions([]);
+      var typingRow = showTyping();
+
+      requestJson('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      }).then(function (result) {
+        removeTyping();
+        if (result.ok && result.payload && result.payload.reply) {
+          addMessage(result.payload.reply, 'bot');
+          renderSuggestions(result.payload.suggestions);
+        } else {
+          addMessage('No pude responder en este momento. Intentá de nuevo.', 'bot');
+        }
+      });
+    }
+
+    function openChat() {
+      dom.chatPanel.classList.remove('d-none');
+      if (!dom.chatMessages.hasChildNodes()) {
+        addMessage('¡Hola! Soy el asistente de Lúmen. Escribí "ayuda" para ver qué puedo hacer.', 'bot');
+        renderSuggestions(['Ver catálogo', 'Buscar un artículo', 'Consultar stock']);
+      }
+      dom.chatInput.focus();
+    }
+
+    function closeChat() {
+      dom.chatPanel.classList.add('d-none');
+    }
+
+    dom.chatToggle.addEventListener('click', function () {
+      if (dom.chatPanel.classList.contains('d-none')) {
+        openChat();
+      } else {
+        closeChat();
+      }
+    });
+    dom.chatClose.addEventListener('click', closeChat);
+    dom.chatSend.addEventListener('click', sendMessage);
+    dom.chatInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+
+  /**
    * Cache the DOM references used across the application.
    */
   function cacheDom() {
@@ -989,6 +1099,13 @@
     dom.floatingBadge = byId('floating-cart-badge');
     dom.searchInput = byId('search-input');
     dom.voiceSearchBtn = byId('voice-search-btn');
+    dom.chatToggle = byId('chat-toggle');
+    dom.chatPanel = byId('chat-panel');
+    dom.chatClose = byId('chat-close');
+    dom.chatMessages = byId('chat-messages');
+    dom.chatSuggestions = byId('chat-suggestions');
+    dom.chatInput = byId('chat-input');
+    dom.chatSend = byId('chat-send');
     dom.categoryFilter = byId('category-filter');
     dom.priceMin = byId('price-min');
     dom.priceMax = byId('price-max');
@@ -1012,6 +1129,7 @@
     loadCart();
     bindEvents();
     setupVoiceSearch();
+    setupChat();
     updateCartUI();
     loadCategories();
     loadCatalog();

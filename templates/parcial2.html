@@ -159,4 +159,26 @@
       <p class="mb-0">© 2026 Lúmen Librería &amp; Papelería Técnica. Todos los derechos reservados.</p>
     </div>
   </footer>
+
+  <!-- Chatbot widget -->
+  <button type="button" id="chat-toggle" class="chat-toggle" aria-label="Abrir chat">
+    <i class="fa-solid fa-comments"></i>
+  </button>
+
+  <div id="chat-panel" class="chat-panel d-none">
+    <div class="chat-header">
+      <span class="fw-bold"><i class="fa-solid fa-robot me-2"></i>Asistente Lúmen</span>
+      <button type="button" id="chat-close" class="btn btn-sm btn-link text-white p-0" aria-label="Cerrar chat">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="chat-messages" class="chat-messages"></div>
+    <div id="chat-suggestions" class="chat-suggestions"></div>
+    <div class="chat-input-row">
+      <input type="text" id="chat-input" class="form-control" placeholder="Escribí tu consulta..." autocomplete="off">
+      <button type="button" id="chat-send" class="btn btn-primary" aria-label="Enviar">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
 {% endblock %}
