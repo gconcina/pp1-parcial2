@@ -6,3 +6,7 @@ __pycache__/
 
 # Generated cache from the gentle-ai skill-registry refresh
 .atl/.skill-registry.cache.json
+
+# Borrador editable del parcial (no se versiona)
+parcial2_pp1.docx
+.~*
